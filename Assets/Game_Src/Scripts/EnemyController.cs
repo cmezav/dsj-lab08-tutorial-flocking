@@ -11,6 +11,9 @@ public class EnemyController : MonoBehaviour
     [SerializeField] private LayerMask m_EnemyMask;
     [SerializeField] private int m_NeighborsCount;
 
+    [SerializeField] private float m_SeparationWeight = 1f;
+    private Vector3 m_SeparationForce;
+
     private Animator m_Animator;
     private Transform m_Target;
 
@@ -38,6 +41,9 @@ public class EnemyController : MonoBehaviour
         Collider[] neighbors = GetNeighbors();
         m_NeighborsCount = neighbors.Length;
 
+        // Se recalcula cada frame; no acumula fuerzas anteriores.
+        m_SeparationForce = CalculateSeparationForce(neighbors);
+
         m_Direction = (m_Target.position - transform.position).WithNewY(0);
         float distance = m_Direction.magnitude;
 
@@ -55,10 +61,21 @@ public class EnemyController : MonoBehaviour
 
     private void MoveTowardsTarget()
     {
-        m_Direction = m_Direction.normalized;
-        Vector3 movement = m_Direction * m_Speed * Time.deltaTime;
-        transform.position += movement;
-        m_MovementSpeedBlend = Mathf.Lerp(m_MovementSpeedBlend, 1, Time.deltaTime * m_Speed);
+        Vector3 combinedDirection =
+            (m_Direction.normalized + m_SeparationForce).normalized;
+
+        transform.position += combinedDirection * m_Speed * Time.deltaTime;
+
+        // Orienta al enemigo hacia su desplazamiento.
+        if (combinedDirection.sqrMagnitude > 0.0001f)
+            m_Direction = combinedDirection;
+
+        m_MovementSpeedBlend = Mathf.Lerp(
+            m_MovementSpeedBlend,
+            1f,
+            Time.deltaTime * m_Speed
+        );
+
         m_Animator.SetFloat("Speed", m_MovementSpeedBlend);
     }
 
@@ -70,8 +87,16 @@ public class EnemyController : MonoBehaviour
 
     private void RotateTowardsTarget()
     {
+        if (m_Direction.sqrMagnitude < 0.0001f)
+            return;
+
         m_TargetRotation = Quaternion.LookRotation(m_Direction);
-        transform.rotation = Quaternion.Slerp(transform.rotation, m_TargetRotation, Time.deltaTime * m_RotationSpeed);
+
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation,
+            m_TargetRotation,
+            Time.deltaTime * m_RotationSpeed
+        );
     }
 
     private Collider[] GetNeighbors()
@@ -100,6 +125,26 @@ public class EnemyController : MonoBehaviour
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, m_DetectionDistance);
+    }
+
+    private Vector3 CalculateSeparationForce(Collider[] neighbors)
+    {
+        Vector3 force = Vector3.zero;
+
+        foreach (Collider neighbor in neighbors)
+        {
+            EnemyController enemy = neighbor.GetComponentInParent<EnemyController>();
+
+            Vector3 away = transform.position - enemy.transform.position;
+            away.y = 0f;
+
+            float distance = away.magnitude;
+
+            if (distance > 0.001f)
+                force += away.normalized / distance;
+        }
+
+        return force * m_SeparationWeight;
     }
 
 }
