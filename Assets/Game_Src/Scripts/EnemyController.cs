@@ -6,6 +6,11 @@ public class EnemyController : MonoBehaviour
     [SerializeField] private float m_RotationSpeed = 8f;
     [SerializeField] private float m_StopDistance = 1.5f; // Distance at which the enemy stops following
 
+    [Header("Boids")]
+    [SerializeField] private float m_DetectionDistance = 1f;
+    [SerializeField] private LayerMask m_EnemyMask;
+    [SerializeField] private int m_NeighborsCount;
+
     private Animator m_Animator;
     private Transform m_Target;
 
@@ -30,6 +35,9 @@ public class EnemyController : MonoBehaviour
 
     private void FollowTarget()
     {
+        Collider[] neighbors = GetNeighbors();
+        m_NeighborsCount = neighbors.Length;
+
         m_Direction = (m_Target.position - transform.position).WithNewY(0);
         float distance = m_Direction.magnitude;
 
@@ -65,4 +73,33 @@ public class EnemyController : MonoBehaviour
         m_TargetRotation = Quaternion.LookRotation(m_Direction);
         transform.rotation = Quaternion.Slerp(transform.rotation, m_TargetRotation, Time.deltaTime * m_RotationSpeed);
     }
+
+    private Collider[] GetNeighbors()
+    {
+        Collider[] detected = Physics.OverlapSphere(
+            transform.position,
+            m_DetectionDistance,
+            m_EnemyMask
+        );
+
+        var neighbors = new System.Collections.Generic.List<Collider>();
+
+        foreach (Collider candidate in detected)
+        {
+            EnemyController enemy = candidate.GetComponentInParent<EnemyController>();
+
+            // No contamos al propio enemigo.
+            if (enemy != null && enemy != this)
+                neighbors.Add(candidate);
+        }
+
+        return neighbors.ToArray();
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, m_DetectionDistance);
+    }
+
 }
