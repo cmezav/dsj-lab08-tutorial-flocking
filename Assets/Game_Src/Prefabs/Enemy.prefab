@@ -386,9 +386,9 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   m_NeighborsCount: 0
-  m_SeparationWeight: 1
-  m_AlignmentWeight: 1
-  m_CohesionWeight: 1
+  m_SeparationWeight: 0.4
+  m_AlignmentWeight: 1.2
+  m_CohesionWeight: 0.5
 --- !u!1 &2940811088755124196
 GameObject:
   m_ObjectHideFlags: 0
