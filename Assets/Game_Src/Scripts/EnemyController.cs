@@ -12,6 +12,8 @@ public class EnemyController : MonoBehaviour
     [SerializeField] private int m_NeighborsCount;
 
     [SerializeField] private float m_SeparationWeight = 1f;
+    [SerializeField] private float m_AlignmentWeight = 1f;
+
     private Vector3 m_SeparationForce;
 
     private Animator m_Animator;
@@ -25,7 +27,13 @@ public class EnemyController : MonoBehaviour
     private void Awake()
     {
         m_Animator = GetComponent<Animator>();
-        m_Target = FindObjectOfType<PlayerController>().transform;
+
+        PlayerController player = FindAnyObjectByType<PlayerController>();
+
+        if (player != null)
+            m_Target = player.transform;
+        else
+            Debug.LogError("No se encontró un PlayerController en la escena.", this);
     }
 
     void Update()
@@ -41,20 +49,17 @@ public class EnemyController : MonoBehaviour
         Collider[] neighbors = GetNeighbors();
         m_NeighborsCount = neighbors.Length;
 
-        // Se recalcula cada frame; no acumula fuerzas anteriores.
+        // Reinicia la fuerza y agrega el alineamiento una sola vez.
         m_SeparationForce = CalculateSeparationForce(neighbors);
+        m_SeparationForce += CalculateAlignmentForce(neighbors);
 
         m_Direction = (m_Target.position - transform.position).WithNewY(0);
         float distance = m_Direction.magnitude;
 
         if (distance > m_StopDistance)
-        {
             MoveTowardsTarget();
-        }
         else
-        {
             StopMove();
-        }
 
         RotateTowardsTarget();
     }
@@ -145,6 +150,26 @@ public class EnemyController : MonoBehaviour
         }
 
         return force * m_SeparationWeight;
+    }
+
+    private Vector3 CalculateAlignmentForce(Collider[] neighbors)
+    {
+        if (neighbors.Length == 0)
+            return Vector3.zero;
+
+        Vector3 neighborsForward = Vector3.zero;
+
+        foreach (Collider neighbor in neighbors)
+        {
+            EnemyController enemy =
+                neighbor.GetComponentInParent<EnemyController>();
+
+            neighborsForward += enemy.transform.forward;
+        }
+
+        neighborsForward.y = 0f;
+
+        return neighborsForward.normalized * m_AlignmentWeight;
     }
 
 }
