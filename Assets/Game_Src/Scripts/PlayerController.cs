@@ -25,6 +25,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (Lab08EnemyPanel.BlocksWorldInput) return;
         if (Input.GetKey(KeyCode.LeftShift))
         {
             StopMove();
@@ -70,6 +71,7 @@ public class PlayerController : MonoBehaviour
         if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, 100, m_FloorMask))
         {
             m_MovePoint = new Vector3(hit.point.x, 0.0f, hit.point.z);
+            Lab08EnemyPanel.ShowDestination(hit.point);
             m_Direction = m_MovePoint.Value - transform.position.WithNewY(0);
             m_TargetRotation = Quaternion.LookRotation(m_Direction);
         }

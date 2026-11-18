@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class EnemyController : MonoBehaviour
 {
+    private bool m_IsStopped;
+    [SerializeField] private float m_ResumeMargin = 0.5f;
+    
     [SerializeField] private float m_Speed = 4f;
     [SerializeField] private float m_RotationSpeed = 8f;
     [SerializeField] private float m_StopDistance = 1.5f; // Distance at which the enemy stops following
@@ -15,6 +18,18 @@ public class EnemyController : MonoBehaviour
     [SerializeField] private float m_AlignmentWeight = 1f;
 
     [SerializeField] private float m_CohesionWeight = 1f;
+
+    // Parametros expuestos para el panel de pruebas durante Play.
+    public Vector3 BoidWeights => new Vector3(m_SeparationWeight, m_AlignmentWeight, m_CohesionWeight);
+
+    public void SetBoidWeights(float separation, float alignment, float cohesion)
+    {
+        m_SeparationWeight = Mathf.Clamp(separation, 0f, 10f);
+        m_AlignmentWeight = Mathf.Clamp(alignment, 0f, 10f);
+        m_CohesionWeight = Mathf.Clamp(cohesion, 0f, 10f);
+    }
+
+
 
     private Vector3 m_SeparationForce;
 
@@ -35,7 +50,7 @@ public class EnemyController : MonoBehaviour
         if (player != null)
             m_Target = player.transform;
         else
-            Debug.LogError("No se encontró un PlayerController en la escena.", this);
+            Debug.LogError("No se encontrÃ³ un PlayerController en la escena.", this);
     }
 
     void Update()
@@ -58,12 +73,25 @@ public class EnemyController : MonoBehaviour
         m_Direction = (m_Target.position - transform.position).WithNewY(0);
         float distance = m_Direction.magnitude;
 
-        if (distance > m_StopDistance)
-            MoveTowardsTarget();
-        else
-            StopMove();
+        // Se detiene al entrar al círculo.
+        if (!m_IsStopped && distance <= m_StopDistance)
+            m_IsStopped = true;
 
-        RotateTowardsTarget();
+        // Solo vuelve a avanzar cuando el jugador se aleja un poco más.
+        if (m_IsStopped && distance > m_StopDistance + m_ResumeMargin)
+            m_IsStopped = false;
+
+        if (m_IsStopped)
+        {
+            StopMove();
+        }
+        else
+        {
+            MoveTowardsTarget();
+            RotateTowardsTarget();
+        }
+
+    
     }
 
     private void MoveTowardsTarget()
