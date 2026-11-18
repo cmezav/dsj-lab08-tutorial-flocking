@@ -14,6 +14,8 @@ public class EnemyController : MonoBehaviour
     [SerializeField] private float m_SeparationWeight = 1f;
     [SerializeField] private float m_AlignmentWeight = 1f;
 
+    [SerializeField] private float m_CohesionWeight = 1f;
+
     private Vector3 m_SeparationForce;
 
     private Animator m_Animator;
@@ -49,9 +51,9 @@ public class EnemyController : MonoBehaviour
         Collider[] neighbors = GetNeighbors();
         m_NeighborsCount = neighbors.Length;
 
-        // Reinicia la fuerza y agrega el alineamiento una sola vez.
         m_SeparationForce = CalculateSeparationForce(neighbors);
         m_SeparationForce += CalculateAlignmentForce(neighbors);
+        m_SeparationForce += CalculateCohesionForce(neighbors);
 
         m_Direction = (m_Target.position - transform.position).WithNewY(0);
         float distance = m_Direction.magnitude;
@@ -170,6 +172,29 @@ public class EnemyController : MonoBehaviour
         neighborsForward.y = 0f;
 
         return neighborsForward.normalized * m_AlignmentWeight;
+    }
+
+    private Vector3 CalculateCohesionForce(Collider[] neighbors)
+    {
+        if (neighbors.Length == 0)
+            return Vector3.zero;
+
+        Vector3 averagePosition = Vector3.zero;
+
+        foreach (Collider neighbor in neighbors)
+        {
+            EnemyController enemy =
+                neighbor.GetComponentInParent<EnemyController>();
+
+            averagePosition += enemy.transform.position;
+        }
+
+        averagePosition /= neighbors.Length;
+
+        Vector3 directionToCenter = averagePosition - transform.position;
+        directionToCenter.y = 0f;
+
+        return directionToCenter.normalized * m_CohesionWeight;
     }
 
 }
